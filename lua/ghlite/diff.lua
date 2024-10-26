@@ -79,12 +79,13 @@ function M.load_pr_diff()
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, diff_content)
 
-  vim.bo[buf].filetype = 'diff'
+  vim.bo[buf].filetype = 'git'
 
   if config.s.diff_split then
     vim.api.nvim_command(config.s.diff_split)
   end
   vim.api.nvim_set_current_buf(buf)
+  vim.api.nvim_set_option_value('foldmethod', 'syntax', { buf = 0 })
 
   vim.bo[buf].readonly = true
   vim.bo[buf].modifiable = false
