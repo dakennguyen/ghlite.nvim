@@ -1,28 +1,33 @@
-# ghlite.nvim
+*ghlite.txt*
 
-Neovim plugin to work GitHub PRs quickly.
+==============================================================================
+ghlite.nvim                           *ghlite.nvim*
 
-Main idea of this plugin to have tools that augment GitHub PR review using web
-instead of replacing it like other plugins do.
+Neovim plugin to work with GitHub PRs quickly.
 
-## Requirements
+Main idea of this plugin is to provide tools that augment GitHub PR review using
+the web interface, instead of replacing it like other plugins.
 
-- nvim 0.10+
+==============================================================================
+REQUIREMENTS                        *ghlite.nvim-requirements*
 
-- [GitHub CLI (gh)](https://cli.github.com/)
+- Neovim 0.10+
+- GitHub CLI (gh) (https://cli.github.com/)
+- Optional: [Diffview.nvim](https://github.com/sindrets/diffview.nvim)
 
-- If you are using fzf-lua or telescope you might want to checkout how to
-  override UI select. E.g. `vim.cmd('FzfLua register_ui_select')`
+To override UI select for fzf-lua or telescope, use:
+>lua
+vim.cmd('FzfLua register_ui_select')
+<
 
-- [Diffview.nvim](https://github.com/sindrets/diffview.nvim) (optional)
+==============================================================================
+INSTALLATION                        *ghlite.nvim-installation*
 
-## Installation
+Using lazy.nvim:
 
-Using lazyvim.
+NOTE: Default config is shown below. Skip settings if you are fine with defaults.
 
-NOTE: default config here. You can skip all the settings if you are OK with defaults.
-
-```lua
+>lua
   {
     'daliusd/ghlite.nvim',
     config = function()
@@ -68,11 +73,13 @@ NOTE: default config here. You can skip all the settings if you are OK with defa
       { '<leader>ug', ':GHLitePROpenComment<cr>',   silent = true },
     }
   }
-```
+<
 
-## PR Review using ghlite.nvim
+==============================================================================
+PR REVIEW USING GHLITE.NVIM         *ghlite.nvim-pr-review*
 
-### Quick PR review
+==============================================================================
+Quick PR Review                     *ghlite.nvim-quick-pr-review*
 
 If you want to make quick PR review without checking out PR code to your repo
 you can do it this way:
@@ -93,7 +100,8 @@ you can do it this way:
 - Run `:GHLitePRApprove` to approve PR if everything is OK. you can use
   `Ctrl-a` in diff and pr views.
 
-### Thorough PR review
+==============================================================================
+Thorough PR Review                  *ghlite.nvim-thorough-pr-review*
 
 However it might be that you want to make thorough PR review by looking not
 only at diff, but at surrounding code as well.
@@ -121,18 +129,22 @@ only at diff, but at surrounding code as well.
 - Run `:GHLitePRApprove` to approve PR if everything is OK. you can use
   `Ctrl-a` in diff and pr views.
 
-## Commands
+==============================================================================
+COMMANDS                            *ghlite.nvim-commands*
 
-### GHLitePRSelect
+==============================================================================
+:GHLitePRSelect                     *:GHLitePRSelect*
 
 This command shows selection of active PRs and selects PR for other operations.
 You can use this command if you want to review PR without checking it out.
 
-### GHLitePRCheckout
+==============================================================================
+:GHLitePRCheckout                   *:GHLitePRCheckout*
 
 This command shows selection of active PRs and checkouts selected PR.
 
-### GHLitePRView
+==============================================================================
+:GHLitePRView                       *:GHLitePRView*
 
 This command shows PR information (wrapper for `gh pr view`).
 
@@ -145,18 +157,21 @@ Supported key bindings:
 Note: You can use default vim shortcuts as well, like `gx` to open links in
 this view.
 
-### GHLitePRApprove
+==============================================================================
+:GHLitePRApprove                    *:GHLitePRApprove*
 
 This command approves selected PR.
 
-### GHLitePRMerge
+==============================================================================
+:GHLitePRMerge                      *:GHLitePRMerge*
 
 This command merges selected PR. Approved and non-approved PRs use different
 options when running `gh pr merge` command. Check `gh pr merge -h` for
 available options and use them in config's `merge` section if defaults are not
 working for you.
 
-### GHLitePRLoadComments
+==============================================================================
+:GHLitePRLoadComments               *:GHLitePRLoadComments*
 
 This command loads PR comments. Only non-outdated review comments are loaded,
 PR comments are not loaded. Comments are loaded to quickfix list and to buffer
@@ -166,7 +181,8 @@ diagnostics on buffer load. Navigate quickfix list using `cnext` and `cprev`
 NOTE: You must checkout git branch related to PR either using
 `:GHLitePRCheckout` or using other tools.
 
-### GHLitePRDiff
+==============================================================================
+:GHLitePRDiff                       *:GHLitePRDiff*
 
 This command loads PR diff that you can review. This command shows diff of
 selected PR. If no PR is selected then PR number is resolved from git branch
@@ -181,7 +197,9 @@ Supported key bindings:
 
 * `Ctrl-a` to approve PR
 
-### GHLitePRDiffview
+
+==============================================================================
+:GHLitePRDiffview                   *:GHLitePRDiffview*
 
 This command shows PR diff using
 [Diffview.nvim](https://github.com/sindrets/diffview.nvim).
@@ -191,7 +209,8 @@ branch. This might be different from what's shown in GitHub. E.g. if there are
 changes in your main branch and your branch does not have changes from main
 branch, then you will be shown that some things are missing in your branch.
 
-### GHLitePRAddComment
+==============================================================================
+:GHLitePRAddComment                 *:GHLitePRAddComment*
 
 This command opens buffer where you can write your comment.
 
@@ -207,15 +226,21 @@ Supported key bindings:
 
     * If there is no comment on line then new conversation is started.
 
-### GHLitePRUpdateComment
+==============================================================================
+:GHLitePRUpdateComment              *:GHLitePRUpdateComment*
 
 This command updates selected comment.
 
-### GHLitePRDeleteComment
+==============================================================================
+:GHLitePRDeleteComment              *:GHLitePRDeleteComment*
 
 This command deletes selected comment.
 
-### GHLitePROpenComment
+==============================================================================
+:GHLitePROpenComment                *:GHLitePROpenComment*
 
 Opens comment under cursor in browser using `open_command` command (default
 `open`).
+
+------------------------------------------------------------------------------
+vim:tw=78:ts=8:ft=help:norl:

@@ -1,37 +1,52 @@
 local utils = require "ghlite.utils"
 local config = require "ghlite.config"
 local comments_utils = require "ghlite.comments_utils"
-local state = require "ghlite.state"
 
 require "ghlite.types"
 
 local f = string.format
-local json = {
-  parse = vim.fn.json_decode,
-  stringify = vim.fn.json_encode
-}
 
 local M = {}
 
+local function parse_or_default(str, default)
+  local success, result = pcall(vim.fn.json_decode, str)
+  if success then
+    return result
+  end
+
+  return default
+end
+
 function M.get_current_pr()
-  return utils.system_str('gh pr view --json number -q .number')[1]
+  local result = utils.system_str('gh pr view --json headRefName,headRefOid,number,baseRefName,reviewDecision')
+  if result[1] == nil then
+    return nil
+  end
+
+  return parse_or_default(result, nil)
 end
 
-function M.get_selected_or_current_pr()
-  if state.selected_PR ~= nil then
-    return state.selected_PR
+function M.get_pr_info(pr_number)
+  local result = utils.system_str(f(
+    'gh pr view %s --json url,author,title,number,labels,comments,reviews,body,changedFiles,isDraft,createdAt',
+    pr_number))
+  if result[1] == nil then
+    return nil
   end
-  local current_pr = M.get_current_pr()
-  if current_pr ~= nil then
-    return current_pr
-  end
+
+  return parse_or_default(result, nil)
 end
 
-function M.load_comments(pr)
-  local repo = utils.system_str('gh repo view --json nameWithOwner -q .nameWithOwner')[1]
+local function get_repo()
+  return utils.system_str('gh repo view --json nameWithOwner -q .nameWithOwner')[1]
+end
+
+--- @params pr_number number
+function M.load_comments(pr_number)
+  local repo = get_repo()
   config.log("repo", repo)
 
-  local comments = json.parse(utils.system_str(f("gh api repos/%s/pulls/%d/comments", repo, pr)))
+  local comments = parse_or_default(utils.system_str(f("gh api repos/%s/pulls/%d/comments", repo, pr_number)), {})
   config.log("comments", comments)
 
   local function is_valid_comment(comment)
@@ -49,16 +64,15 @@ function M.load_comments(pr)
   return comments
 end
 
-function M.reply_to_comment(body, reply_to)
-  local repo = utils.system_str('gh repo view --json nameWithOwner -q .nameWithOwner')[1]
-  local pr = M.get_selected_or_current_pr()
+function M.reply_to_comment(pr_number, body, reply_to)
+  local repo = get_repo()
 
   local request = {
     'gh',
     'api',
     '--method',
     'POST',
-    f("repos/%s/pulls/%d/comments", repo, pr),
+    f("repos/%s/pulls/%d/comments", repo, pr_number),
     "-f",
     "body=" .. body,
     "-F",
@@ -66,23 +80,22 @@ function M.reply_to_comment(body, reply_to)
   }
   config.log('reply_to_comment request', request)
 
-  local resp = json.parse(utils.system(request))
+  local resp = parse_or_default(utils.system(request), { errors = {} })
 
   config.log("reply_to_comment resp", resp)
   return resp
 end
 
-function M.new_comment(body, path, line)
-  local repo = utils.system_str('gh repo view --json nameWithOwner -q .nameWithOwner')[1]
-  local pr = M.get_selected_or_current_pr()
-  local commit_id = state.selected_headRefOid and state.selected_headRefOid or utils.system_str("git rev-parse HEAD")[1]
+function M.new_comment(selected_pr, body, path, start_line, line)
+  local repo = get_repo()
+  local commit_id = selected_pr.headRefOid
 
   local request = {
     'gh',
     'api',
     '--method',
     'POST',
-    f("repos/%s/pulls/%d/comments", repo, pr),
+    f("repos/%s/pulls/%d/comments", repo, selected_pr.number),
     "-f",
     "body=" .. body,
     "-f",
@@ -94,23 +107,70 @@ function M.new_comment(body, path, line)
     "-f",
     "side=RIGHT",
   }
+
+  if start_line ~= line then
+    table.insert(request, "-F")
+    table.insert(request, "start_line=" .. start_line)
+  end
+
   config.log('new_comment request', request)
 
-  local resp = json.parse(utils.system(request))
+  local resp = parse_or_default(utils.system(request), { errors = {} })
 
   config.log("new_comment resp", resp)
   return resp
 end
 
+function M.update_comment(comment_id, body)
+  local repo = get_repo()
+
+  local request = {
+    'gh',
+    'api',
+    '--method',
+    'PATCH',
+    f("repos/%s/pulls/comments/%s", repo, comment_id),
+    "-f",
+    "body=" .. body,
+  }
+  config.log('update_comment request', request)
+
+  local resp = parse_or_default(utils.system(request), { errors = {} })
+
+  config.log("update_comment resp", resp)
+  return resp
+end
+
+function M.delete_comment(comment_id)
+  local repo = get_repo()
+
+  local request = {
+    'gh',
+    'api',
+    '--method',
+    'DELETE',
+    f("repos/%s/pulls/comments/%s", repo, comment_id),
+  }
+  config.log('delete_comment request', request)
+
+  local resp = utils.system(request)
+
+  config.log("delete_comment resp", resp)
+  return resp
+end
+
 function M.get_pr_list()
-  local resp = json.parse(utils.system_str(
-    'gh pr list --json number,title,author,createdAt,isDraft,reviewDecision,headRefName,headRefOid'))
+  local resp = parse_or_default(utils.system_str(
+      'gh pr list --json number,title,author,createdAt,isDraft,reviewDecision,headRefName,headRefOid,baseRefName,labels'),
+    {})
+  config.log("get_pr_list resp", resp)
 
   return resp
 end
 
+--- @param number number
 function M.checkout_pr(number)
-  local resp = utils.system_str(f('gh pr checkout %s', number))
+  local resp = utils.system_str(f('gh pr checkout %d', number))
   return resp
 end
 
@@ -121,6 +181,14 @@ end
 
 function M.get_pr_diff(number)
   return utils.system_str(f('gh pr diff %s', number))
+end
+
+function M.merge_pr(number, options)
+  return utils.system_str(f('gh pr merge %s %s', number, options))
+end
+
+function M.get_user()
+  return utils.system_str('gh api user -q .login')[1]
 end
 
 return M
